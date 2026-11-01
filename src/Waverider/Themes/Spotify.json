@@ -1,0 +1,12 @@
+{
+  "name": "Spotify",
+  "backdrop": "Mica",
+  "elementTheme": "Dark",
+  "accent": "#1DB954",
+  "primary": "#1DB954",
+  "secondary": "#1ED760",
+  "background": "#0A0A0A",
+  "surface": "#181818",
+  "foreground": "#FFFFFF",
+  "muted": "#B3B3B3"
+}

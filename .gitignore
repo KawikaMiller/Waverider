@@ -1,0 +1,17 @@
+# build output
+[Bb]in/
+[Oo]bj/
+publish/
+artifacts/
+*.zip
+
+# IDE and local tooling
+.vs/
+*.user
+.claude/settings.local.json
+
+# local state and junk that must never be committed
+token.json
+*.stackdump
+.runlog*
+*.log

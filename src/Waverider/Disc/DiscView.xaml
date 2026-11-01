@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="Waverider.Disc.DiscView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:skia="using:SkiaSharp.Views.Windows"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <!-- Stacked layers: a static shadow, the disc body (rotated from code-behind), the optional visualizer
+         (rotated with the disc, or held upright), and a static sheen on top so reflections stay put
+         while the disc turns underneath them.
+         The disc is drawn centered at the smaller of the two dimensions, so any aspect works. -->
+    <Grid>
+        <skia:SKXamlCanvas x:Name="ShadowCanvas" PaintSurface="OnPaintShadow" IsHitTestVisible="False" />
+        <skia:SKXamlCanvas x:Name="BodyCanvas" PaintSurface="OnPaintBody" IsHitTestVisible="False"
+                           RenderTransformOrigin="0.5,0.5" />
+        <skia:SKXamlCanvas x:Name="VisualizerCanvas" PaintSurface="OnPaintVisualizer" IsHitTestVisible="False"
+                           Visibility="Collapsed" RenderTransformOrigin="0.5,0.5" />
+        <skia:SKXamlCanvas x:Name="SheenCanvas" PaintSurface="OnPaintSheen" IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

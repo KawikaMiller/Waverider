@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="Waverider.Views.LibraryPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Waverider.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: back / title / close -->
+        <Grid Grid.Row="0" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="BackButton" Click="OnBackClick" Visibility="Collapsed"
+                    AutomationProperties.Name="Back">
+                <FontIcon Glyph="&#xE72B;" FontSize="14" />
+            </Button>
+            <TextBlock x:Name="TitleText" Grid.Column="1" Text="Library" FontSize="18"
+                       FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <Button x:Name="CloseButton" Grid.Column="2" Click="OnCloseClick" AutomationProperties.Name="Close library">
+                <FontIcon Glyph="&#xE711;" FontSize="14" />
+            </Button>
+        </Grid>
+
+        <SelectorBar x:Name="Tabs" Grid.Row="1" SelectionChanged="OnTabChanged">
+            <SelectorBarItem Text="Search" Tag="search" />
+            <SelectorBarItem Text="Liked" Tag="liked" />
+            <SelectorBarItem Text="Playlists" Tag="playlists" />
+            <SelectorBarItem Text="Queue" Tag="queue" />
+        </SelectorBar>
+
+        <TextBox x:Name="SearchBox" Grid.Row="2"
+                 PlaceholderText="Search songs, artists, albums, playlists"
+                 KeyDown="OnSearchKeyDown" />
+
+        <ListView x:Name="List" Grid.Row="3"
+                  SelectionMode="None"
+                  IsItemClickEnabled="True"
+                  ItemClick="OnRowClick">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="4,2,4,2" />
+                    <Setter Property="MinHeight" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:BrowseRow">
+                    <Grid ColumnSpacing="10" Padding="2,4,2,4" RightTapped="OnRowRightTapped">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="44" Height="44" CornerRadius="4"
+                                Visibility="{x:Bind ThumbVisibility}"
+                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                            <Grid>
+                                <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" Opacity="0.5" />
+                                <Image Source="{x:Bind Thumb}" Stretch="UniformToFill" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind Title}" TextTrimming="CharacterEllipsis"
+                                       FontWeight="{x:Bind TitleWeight}" />
+                            <TextBlock Text="{x:Bind Subtitle}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                       Visibility="{x:Bind SubtitleVisibility}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Click="OnRowMoreClick"
+                                Visibility="{x:Bind MoreVisibility}"
+                                Padding="8,4,8,4"
+                                AutomationProperties.Name="More options">
+                            <FontIcon Glyph="&#xE712;" FontSize="14" />
+                        </Button>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Signed-out prompt -->
+        <StackPanel x:Name="SignedOutPanel" Grid.Row="3" Visibility="Collapsed"
+                    VerticalAlignment="Center" Spacing="12" Padding="16">
+            <TextBlock Text="Sign in to Spotify to browse your library, search, and manage your queue."
+                       TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Button Content="Sign in" HorizontalAlignment="Center" Click="OnSignInClick"
+                    Style="{ThemeResource AccentButtonStyle}" />
+        </StackPanel>
+
+        <ProgressRing x:Name="Busy" Grid.Row="3" Width="28" Height="28"
+                      IsActive="False" Visibility="Collapsed"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <TextBlock x:Name="StatusText" Grid.Row="4" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    </Grid>
+</UserControl>

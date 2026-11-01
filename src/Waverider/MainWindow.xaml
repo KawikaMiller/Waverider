@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="Waverider.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:Waverider"
+    xmlns:views="using:Waverider.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Waverider"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Waverider">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="Assets/AppIcon.ico" />
+            </TitleBar.IconSource>
+            <TitleBar.RightHeader>
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Button Click="OnLayoutClick" ToolTipService.ToolTip="Switch between Now Playing and Browse layouts" AutomationProperties.Name="Switch layout">
+                        <SymbolIcon Symbol="ViewAll" />
+                    </Button>
+                    <Button Click="OnLibraryClick" ToolTipService.ToolTip="Browse library, search and queue" AutomationProperties.Name="Library">
+                        <FontIcon Glyph="&#xE8F1;" FontSize="14" />
+                    </Button>
+                    <Button x:Name="SignInButton"
+                            Click="OnSignInClick"
+                            ToolTipService.ToolTip="Sign in to Spotify">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8AC;" FontSize="14" />
+                            <TextBlock x:Name="SignInLabel" Text="Sign in" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnSettingsClick" ToolTipService.ToolTip="Settings" AutomationProperties.Name="Settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="14" />
+                    </Button>
+                    <Button Click="OnMiniClick" ToolTipService.ToolTip="Mini player mode" AutomationProperties.Name="Mini player">
+                        <FontIcon Glyph="&#xE740;" FontSize="14" />
+                    </Button>
+                </StackPanel>
+            </TitleBar.RightHeader>
+        </TitleBar>
+
+        <ContentPresenter x:Name="ShellHost" Grid.Row="1" />
+
+
+        <!-- Hidden host for the Spotify Web Playback SDK (this app as a Connect device). -->
+        <WebView2 x:Name="PlayerWebView" Grid.Row="1"
+                  Width="2" Height="2"
+                  HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                  IsHitTestVisible="False" />
+    </Grid>
+</Window>

@@ -1,0 +1,12 @@
+{
+  "name": "Synthwave",
+  "backdrop": "Acrylic",
+  "elementTheme": "Dark",
+  "accent": "#FF2A6D",
+  "primary": "#FF2A6D",
+  "secondary": "#05D9E8",
+  "background": "#1A0033",
+  "surface": "#2D0052",
+  "foreground": "#F5E1FF",
+  "muted": "#A085C2"
+}

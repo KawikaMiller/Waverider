@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Waverider - web player host</title>
+</head>
+<body>
+<script>
+  // Bridge to the native app. Messages are JSON strings: { type, data }.
+  const post = (type, data) => window.chrome.webview.postMessage(JSON.stringify({ type, data }));
+
+  let token = null;
+  let tokenWaiters = [];
+  let player = null;
+
+  window.chrome.webview.addEventListener('message', (e) => {
+    let m;
+    try { m = JSON.parse(e.data); } catch { return; }
+    if (m.type === 'token') {
+      token = m.token;
+      tokenWaiters.splice(0).forEach((resolve) => resolve(token));
+    } else if (m.type === 'command' && player) {
+      if (m.name === 'toggle') player.togglePlay();
+      else if (m.name === 'pause') player.pause();
+      else if (m.name === 'resume') player.resume();
+      else if (m.name === 'next') player.nextTrack();
+      else if (m.name === 'previous') player.previousTrack();
+      else if (m.name === 'seek') player.seek(m.value);
+      else if (m.name === 'volume') player.setVolume(m.value);
+      else if (m.name === 'activate') player.activateElement();
+      else if (m.name === 'connect') player.connect();
+    }
+  });
+
+  // --- DRM probe: the make-or-break question for hosting the player in WebView2. ---
+  (async () => {
+    const result = { secure: window.isSecureContext, ua: navigator.userAgent };
+    for (const robustness of ['SW_SECURE_CRYPTO', '']) {
+      try {
+        const access = await navigator.requestMediaKeySystemAccess('com.widevine.alpha', [{
+          initDataTypes: ['cenc'],
+          audioCapabilities: [{ contentType: 'audio/mp4;codecs="mp4a.40.2"', robustness }]
+        }]);
+        result.widevine = true;
+        result.robustness = robustness || '(default)';
+        result.keySystem = access.keySystem;
+        break;
+      } catch (err) {
+        result.widevine = false;
+        result.error = String(err);
+      }
+    }
+    post('drm', result);
+  })();
+
+  // --- Web Playback SDK ---
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    post('sdk', { ready: true });
+    player = new Spotify.Player({
+      name: 'Waverider',
+      volume: 0.8,
+      getOAuthToken: (cb) => {
+        // Always ask native for a fresh token; they expire hourly.
+        tokenWaiters.push(cb);
+        post('needToken', {});
+      }
+    });
+
+    player.addListener('ready', ({ device_id }) => post('ready', { device_id }));
+    player.addListener('not_ready', ({ device_id }) => post('not_ready', { device_id }));
+    player.addListener('autoplay_failed', () => post('error', { kind: 'autoplay_failed', message: 'Browser blocked autoplay' }));
+    player.addListener('player_state_changed', (s) => post('state', s));
+    ['initialization_error', 'authentication_error', 'account_error', 'playback_error'].forEach((kind) =>
+      player.addListener(kind, ({ message }) => post('error', { kind, message })));
+
+    player.connect().then((ok) => post('connect', { ok }));
+  };
+</script>
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+</body>
+</html>

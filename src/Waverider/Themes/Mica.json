@@ -1,0 +1,15 @@
+{
+  "name": "Soft Light",
+  "backdrop": "None",
+  "elementTheme": "Light",
+  "accent": "#148A3B",
+  "primary": "#1DB954",
+  "secondary": "#7ED9A0",
+  "background": "#CDD1C9",
+  "surface": "#E8EBE4",
+  "foreground": "#1B211C",
+  "muted": "#566057",
+  "panel": "#E8EBE4",
+  "stage": "#0F1913",
+  "stroke": "#AEB5A9"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Solar Flare",
+  "backdrop": "Acrylic",
+  "elementTheme": "Dark",
+  "accent": "#FFB347",
+  "primary": "#FF6B35",
+  "secondary": "#FFC857",
+  "background": "#1A0F00",
+  "surface": "#2A1A05",
+  "foreground": "#FFE6CC",
+  "muted": "#B89472"
+}

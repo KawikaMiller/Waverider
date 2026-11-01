@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="Waverider.Views.MiniPlayerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vis="using:Waverider.Visualization"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <!-- Mini mode: just the visualizer and prev / play-pause / next. The track title and
+         artist (and the restore button) fade in while the pointer is over the window. -->
+    <Grid x:Name="Root"
+          Padding="6"
+          Background="Transparent"
+          PointerEntered="OnPointerEntered"
+          PointerMoved="OnPointerMoved"
+          PointerExited="OnPointerExited">
+
+        <Border CornerRadius="12"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource AppStrokeBrush}"
+                Background="{ThemeResource AppStageBrush}">
+            <Grid>
+                <vis:VisualizerHost x:Name="Visualizer" />
+
+                <!-- Hover: track info over a scrim, plus the restore button -->
+                <Grid x:Name="HoverInfo"
+                      VerticalAlignment="Top"
+                      Opacity="0"
+                      Padding="14,10,10,22">
+                    <Grid.OpacityTransition>
+                        <ScalarTransition />
+                    </Grid.OpacityTransition>
+                    <Grid.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#D9000000" Offset="0" />
+                            <GradientStop Color="#00000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Grid.Background>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="TrackTitle"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="TrackArtist"
+                                   FontSize="12"
+                                   Foreground="#CCFFFFFF"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                        <Button Click="OnSwitchToDiscClick"
+                                Padding="6"
+                                Background="#33FFFFFF"
+                                BorderThickness="0"
+                                Foreground="White"
+                                ToolTipService.ToolTip="Switch to the spinning disc player"
+                                AutomationProperties.Name="Switch to the spinning disc player">
+                            <FontIcon Glyph="&#xE895;" FontSize="11" />
+                        </Button>
+                        <Button Click="OnExpandClick"
+                                Padding="6"
+                                Background="#33FFFFFF"
+                                BorderThickness="0"
+                                Foreground="White"
+                                ToolTipService.ToolTip="Restore full window"
+                                AutomationProperties.Name="Restore full window">
+                            <FontIcon Glyph="&#xE740;" FontSize="11" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Transport (always visible) -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,10">
+                    <Button Click="OnPreviousClick"
+                            Background="#66000000"
+                            BorderThickness="0"
+                            Foreground="White"
+                            ToolTipService.ToolTip="Previous"
+                            AutomationProperties.Name="Previous">
+                        <FontIcon Glyph="&#xE892;" FontSize="12" />
+                    </Button>
+                    <Button x:Name="PlayPauseButton"
+                            Click="OnPlayPauseClick"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            AutomationProperties.Name="Play or pause">
+                        <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;" FontSize="14" />
+                    </Button>
+                    <Button Click="OnNextClick"
+                            Background="#66000000"
+                            BorderThickness="0"
+                            Foreground="White"
+                            ToolTipService.ToolTip="Next"
+                            AutomationProperties.Name="Next">
+                        <FontIcon Glyph="&#xE893;" FontSize="12" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
