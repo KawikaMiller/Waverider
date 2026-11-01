@@ -101,17 +101,75 @@ public sealed partial class PlayerView : UserControl
         RefreshCaptureStatus();
     }
 
+    private const string AppTagPrefix = "App:";
+
+    // Apps currently offered in the capture picker, by executable name.
+    private readonly Dictionary<string, AudioApp> _captureApps = new(StringComparer.OrdinalIgnoreCase);
+    private bool _syncingCaptureCombo;
+
     private void SyncCaptureModeCombo()
     {
         if (_viewModel is null) return;
+        RefreshCaptureApps();
+        string tag = _viewModel.CaptureMode == AudioCaptureMode.Application
+            ? AppTagPrefix + _viewModel.CaptureApp
+            : _viewModel.CaptureMode.ToString();
         foreach (ComboBoxItem item in CaptureModeCombo.Items.OfType<ComboBoxItem>())
         {
-            if ((string?)item.Tag == _viewModel.CaptureMode.ToString())
+            if ((string?)item.Tag == tag)
             {
-                CaptureModeCombo.SelectedItem = item;
+                _syncingCaptureCombo = true;
+                try { CaptureModeCombo.SelectedItem = item; }
+                finally { _syncingCaptureCombo = false; }
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Rebuilds the per-app entries below the fixed ones, like the app list in the Windows volume mixer.
+    /// The currently selected app stays listed even when it has no audio session right now.
+    /// </summary>
+    private void RefreshCaptureApps()
+    {
+        if (_viewModel is null) return;
+        var apps = AudioAppEnumerator.GetApps()
+            // The Spotify desktop app already has its own fixed entry.
+            .Where(a => !a.ProcessName.Equals("Spotify", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        string? selected = _viewModel.CaptureApp;
+        if (selected is not null && !apps.Any(a => a.ProcessName.Equals(selected, StringComparison.OrdinalIgnoreCase)))
+            apps.Add(new AudioApp(selected, AudioAppEnumerator.DisplayNameFor(selected), false));
+
+        _syncingCaptureCombo = true;
+        try
+        {
+            var items = CaptureModeCombo.Items;
+            for (int i = items.Count - 1; i >= 0; i--)
+            {
+                if (items[i] is ComboBoxItem { Tag: string tag } && tag.StartsWith(AppTagPrefix, StringComparison.Ordinal))
+                    items.RemoveAt(i);
+            }
+
+            _captureApps.Clear();
+            foreach (var app in apps)
+            {
+                _captureApps[app.ProcessName] = app;
+                items.Add(new ComboBoxItem
+                {
+                    Content = app.IsPlaying ? $"{app.DisplayName} (playing)" : app.DisplayName,
+                    Tag = AppTagPrefix + app.ProcessName,
+                });
+            }
+        }
+        finally { _syncingCaptureCombo = false; }
+    }
+
+    private void OnCaptureDropDownOpened(object? sender, object e)
+    {
+        // Pick up apps that started playing since the list was last built, without losing the selection.
+        SyncCaptureModeCombo();
     }
 
     private void SyncDiscCombos()
@@ -165,9 +223,15 @@ public sealed partial class PlayerView : UserControl
 
     private void OnCaptureModeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_viewModel is null) return;
-        if (CaptureModeCombo.SelectedItem is ComboBoxItem item &&
-            Enum.TryParse<AudioCaptureMode>((string?)item.Tag, out var mode))
+        if (_viewModel is null || _syncingCaptureCombo) return;
+        if (CaptureModeCombo.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+
+        if (tag.StartsWith(AppTagPrefix, StringComparison.Ordinal))
+        {
+            if (_captureApps.TryGetValue(tag[AppTagPrefix.Length..], out var app))
+                _viewModel.SetCaptureApp(app);
+        }
+        else if (Enum.TryParse<AudioCaptureMode>(tag, out var mode))
         {
             _viewModel.CaptureMode = mode;
         }
@@ -193,6 +257,7 @@ public sealed partial class PlayerView : UserControl
             case nameof(PlayerViewModel.CaptureStatus):
                 RefreshCaptureStatus(); break;
             case nameof(PlayerViewModel.CaptureMode):
+            case nameof(PlayerViewModel.CaptureApp):
                 SyncCaptureModeCombo(); break;
             case nameof(PlayerViewModel.DiscSkin):
                 Disc.Skin = _viewModel.DiscSkin;

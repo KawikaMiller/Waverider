@@ -6,5 +6,7 @@ public enum AudioCaptureMode
     ThisApp,
     /// <summary>The Spotify desktop client's processes only.</summary>
     SpotifyOnly,
+    /// <summary>One chosen application's processes, picked from the apps that currently have audio (see <see cref="AudioAppEnumerator"/>).</summary>
+    Application,
     SystemLoopback
 }

@@ -16,6 +16,8 @@ public static class AppSettings
         public string? MiniPlayerKind { get; set; }
         public string? DiscFace { get; set; }
         public bool DiscVisualizerSpins { get; set; }
+        public string? CaptureMode { get; set; }
+        public string? CaptureApp { get; set; }
     }
 
     private static readonly string Path_ = Path.Combine(
@@ -82,6 +84,20 @@ public static class AppSettings
     {
         get => Current.DiscVisualizerSpins;
         set { Current.DiscVisualizerSpins = value; Save(); }
+    }
+
+    /// <summary>Last chosen audio capture mode (an <c>AudioCaptureMode</c> name).</summary>
+    public static string? CaptureMode
+    {
+        get => Current.CaptureMode;
+        set { Current.CaptureMode = value; Save(); }
+    }
+
+    /// <summary>Executable name of the application chosen in Application capture mode.</summary>
+    public static string? CaptureApp
+    {
+        get => Current.CaptureApp;
+        set { Current.CaptureApp = value; Save(); }
     }
 
     private static Data Load()

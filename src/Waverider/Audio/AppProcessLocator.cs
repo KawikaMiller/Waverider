@@ -2,18 +2,18 @@ using System.Diagnostics;
 
 namespace Waverider.Audio;
 
-internal static class SpotifyProcessLocator
+internal static class AppProcessLocator
 {
-    // Spotify spawns several Spotify.exe instances (renderer, GPU, audio, ...).
-    // For process-tree loopback we want the root parent — the oldest one.
-    public static uint? FindMainSpotifyPid()
+    // Apps like Spotify, Discord and browsers spawn many processes of the same name (renderer, GPU,
+    // audio service, ...). For process-tree loopback we want the root parent: the oldest one.
+    public static uint? FindRootPid(string processName)
     {
-        var procs = Process.GetProcessesByName("Spotify");
+        var procs = Process.GetProcessesByName(processName);
         try
         {
             if (procs.Length == 0) return null;
 
-            Process? main = null;
+            Process? root = null;
             DateTime oldest = DateTime.MaxValue;
             foreach (var p in procs)
             {
@@ -22,7 +22,7 @@ internal static class SpotifyProcessLocator
                     if (p.StartTime < oldest)
                     {
                         oldest = p.StartTime;
-                        main = p;
+                        root = p;
                     }
                 }
                 catch
@@ -30,8 +30,8 @@ internal static class SpotifyProcessLocator
                     // Some processes refuse StartTime queries — skip them.
                 }
             }
-            main ??= procs[0];
-            return (uint)main.Id;
+            root ??= procs[0];
+            return (uint)root.Id;
         }
         finally
         {

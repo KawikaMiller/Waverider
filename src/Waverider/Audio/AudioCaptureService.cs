@@ -13,7 +13,9 @@ public sealed class AudioCaptureService : IDisposable
     private MMDevice? _device;
     private System.Threading.Timer? _frameTimer;
     private System.Threading.Timer? _watchdog;
-    private uint? _currentSpotifyPid;
+    private uint? _currentPid;
+    private string? _appProcessName;
+    private string? _appDisplayName;
 
     private readonly int _windowSamples;
     private readonly float[] _ring;
@@ -24,6 +26,9 @@ public sealed class AudioCaptureService : IDisposable
     private bool _isFloat = true;
 
     public AudioCaptureMode Mode { get; private set; } = AudioCaptureMode.ThisApp;
+
+    /// <summary>Executable name of the app captured in <see cref="AudioCaptureMode.Application"/> mode.</summary>
+    public string? AppProcessName => _appProcessName;
 
     /// <summary>PID of the process that owns the built-in player's audio (WebView2's browser process).</summary>
     public Func<uint?>? ThisAppPidProvider { get; set; }
@@ -52,65 +57,95 @@ public sealed class AudioCaptureService : IDisposable
         Start();
     }
 
+    /// <summary>Captures one application's audio (its whole process tree), restarting capture if it was running.</summary>
+    public void SetApplication(string processName, string? displayName = null)
+    {
+        lock (_lock)
+        {
+            if (Mode == AudioCaptureMode.Application && string.Equals(_appProcessName, processName, StringComparison.OrdinalIgnoreCase)) return;
+            Mode = AudioCaptureMode.Application;
+            _appProcessName = processName;
+            _appDisplayName = displayName ?? AudioAppEnumerator.DisplayNameFor(processName);
+        }
+        Stop();
+        Start();
+    }
+
+    /// <summary>Applies a saved selection without starting capture. Only valid before <see cref="Start"/>.</summary>
+    public void Restore(AudioCaptureMode mode, string? processName)
+    {
+        lock (_lock)
+        {
+            if (IsRunning || _watchdog is not null) return;
+            if (mode == AudioCaptureMode.Application)
+            {
+                if (string.IsNullOrWhiteSpace(processName)) return;
+                _appProcessName = processName;
+                _appDisplayName = AudioAppEnumerator.DisplayNameFor(processName);
+            }
+            Mode = mode;
+        }
+    }
+
+    /// <summary>Name shown in status text for the process-based modes.</summary>
+    private string TargetLabel => Mode switch
+    {
+        AudioCaptureMode.ThisApp => "this app's built-in player",
+        AudioCaptureMode.SpotifyOnly => "Spotify",
+        _ => _appDisplayName ?? _appProcessName ?? "the selected app",
+    };
+
+    private string CapturingStatus(uint? pid) =>
+        Mode == AudioCaptureMode.ThisApp ? $"Capturing {TargetLabel} (PID {pid})." : $"Capturing only {TargetLabel} (PID {pid}).";
+
+    /// <summary>PID that process-tree capture should target for the current mode, or null when that app isn't running.</summary>
+    private uint? FindTargetPid() => Mode switch
+    {
+        // WebView2's processes are not children of this process (its browser process is launched by a
+        // system service), so target that browser process directly; the audio service is a descendant of it.
+        AudioCaptureMode.ThisApp => ThisAppPidProvider?.Invoke(),
+        AudioCaptureMode.SpotifyOnly => AppProcessLocator.FindRootPid("Spotify"),
+        AudioCaptureMode.Application when _appProcessName is not null => AppProcessLocator.FindRootPid(_appProcessName),
+        _ => null,
+    };
+
     public void Start()
     {
         lock (_lock)
         {
             if (IsRunning || _watchdog is not null) return;
 
-            if (Mode == AudioCaptureMode.ThisApp)
-            {
-                // WebView2's processes are not children of this process (its browser process is
-                // launched by a system service), so target that browser process directly; the
-                // audio service is a descendant of it. The watchdog retries until it's up.
-                var pid = ThisAppPidProvider?.Invoke();
-                if (pid is null)
-                {
-                    SetStatus("Waiting for the built-in player to start…");
-                }
-                else
-                {
-                    try
-                    {
-                        StartProcessLoopback(pid.Value);
-                        SetStatus("Capturing this app's built-in player.");
-                    }
-                    catch (Exception ex)
-                    {
-                        SetStatus($"Process loopback failed ({ex.Message}). Falling back to all system audio.");
-                        try { StartSystemLoopback(); } catch (Exception ex2) { SetStatus($"System loopback failed: {ex2.Message}"); return; }
-                    }
-                }
-            }
-            else if (Mode == AudioCaptureMode.SpotifyOnly)
-            {
-                var pid = SpotifyProcessLocator.FindMainSpotifyPid();
-                if (pid is null)
-                {
-                    SetStatus("Spotify isn't running — capture will start automatically when it launches.");
-                }
-                else
-                {
-                    try
-                    {
-                        StartProcessLoopback(pid.Value);
-                        SetStatus($"Capturing only Spotify (PID {pid}).");
-                    }
-                    catch (Exception ex)
-                    {
-                        SetStatus($"Process loopback failed ({ex.Message}). Falling back to all system audio.");
-                        try { StartSystemLoopback(); } catch (Exception ex2) { SetStatus($"System loopback failed: {ex2.Message}"); return; }
-                    }
-                }
-            }
-            else
+            if (Mode == AudioCaptureMode.SystemLoopback)
             {
                 try { StartSystemLoopback(); SetStatus("Capturing all system audio."); }
                 catch (Exception ex) { SetStatus($"System loopback failed: {ex.Message}"); return; }
             }
+            else
+            {
+                var pid = FindTargetPid();
+                if (pid is null)
+                {
+                    SetStatus(Mode == AudioCaptureMode.ThisApp
+                        ? "Waiting for the built-in player to start…"
+                        : $"{TargetLabel} isn't running — capture will start automatically when it launches.");
+                }
+                else
+                {
+                    try
+                    {
+                        StartProcessLoopback(pid.Value);
+                        SetStatus(CapturingStatus(pid));
+                    }
+                    catch (Exception ex)
+                    {
+                        SetStatus($"Process loopback failed ({ex.Message}). Falling back to all system audio.");
+                        try { StartSystemLoopback(); } catch (Exception ex2) { SetStatus($"System loopback failed: {ex2.Message}"); return; }
+                    }
+                }
+            }
 
-            // Watchdog re-checks the Spotify process every few seconds in SpotifyOnly mode.
-            _watchdog = new System.Threading.Timer(_ => CheckSpotifyState(), null, 3000, 3000);
+            // Watchdog re-checks the target process every few seconds in the process-based modes.
+            _watchdog = new System.Threading.Timer(_ => CheckTargetState(), null, 3000, 3000);
         }
     }
 
@@ -148,7 +183,7 @@ public sealed class AudioCaptureService : IDisposable
             try { _device.Dispose(); } catch { }
             _device = null;
         }
-        _currentSpotifyPid = null;
+        _currentPid = null;
 
         if (IsRunning)
         {
@@ -164,7 +199,7 @@ public sealed class AudioCaptureService : IDisposable
         _proc.DataAvailable += OnDataAvailable;
         _proc.RecordingStopped += OnRecordingStopped;
         _proc.Start(pid, includeProcessTree: true);
-        _currentSpotifyPid = pid;
+        _currentPid = pid;
         BeginEmitting();
     }
 
@@ -198,54 +233,37 @@ public sealed class AudioCaptureService : IDisposable
         RunningChanged?.Invoke(true);
     }
 
-    private void CheckSpotifyState()
+    private void CheckTargetState()
     {
         if (Mode == AudioCaptureMode.SystemLoopback) return;
         uint? pid;
-        try
-        {
-            pid = Mode == AudioCaptureMode.ThisApp
-                ? ThisAppPidProvider?.Invoke()
-                : SpotifyProcessLocator.FindMainSpotifyPid();
-        }
+        try { pid = FindTargetPid(); }
         catch { return; }
 
         lock (_lock)
         {
+            // A tick already in flight when Stop() ran must not re-arm capture.
+            if (_watchdog is null) return;
             if (Mode == AudioCaptureMode.SystemLoopback) return;
             if (_wasapi is not null) return; // running on the system-loopback fallback; don't double up
 
-            if (pid is null && _currentSpotifyPid is not null)
+            if (pid is null && _currentPid is not null)
             {
                 StopEngine_NoLock();
                 SetStatus(Mode == AudioCaptureMode.ThisApp
                     ? "Built-in player stopped — waiting for it to restart."
-                    : "Spotify closed — waiting for it to reopen.");
+                    : $"{TargetLabel} closed — waiting for it to reopen.");
                 return;
             }
 
-            if (pid is not null && _currentSpotifyPid is null)
+            if (pid is not null && _currentPid != pid)
             {
-                try
-                {
-                    StartProcessLoopback(pid.Value);
-                    SetStatus($"Capturing {(Mode == AudioCaptureMode.ThisApp ? "this app's built-in player" : "only Spotify")} (PID {pid}).");
-                }
-                catch (Exception ex)
-                {
-                    SetStatus($"Process loopback failed: {ex.Message}");
-                }
-                return;
-            }
-
-            if (pid is not null && _currentSpotifyPid != pid)
-            {
-                // Spotify restarted with a different PID — re-arm.
+                // The app just launched, or restarted with a different PID: (re-)arm.
                 StopEngine_NoLock();
                 try
                 {
                     StartProcessLoopback(pid.Value);
-                    SetStatus($"Capturing only Spotify (PID {pid}).");
+                    SetStatus(CapturingStatus(pid));
                 }
                 catch (Exception ex)
                 {
