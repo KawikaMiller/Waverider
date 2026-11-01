@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using Waverider.Audio;
 using Waverider.Spotify;
 using Windows.Media;
 using Windows.Media.Control;
@@ -26,6 +27,7 @@ public sealed class SmtcNowPlayingService : INowPlayingSource, IDisposable
     private readonly BlockingCollection<Action> _work = new();
     private readonly Thread _thread;
     private readonly System.Threading.Timer _tick;
+    private readonly AudioCaptureService _audio;
 
     // Touched only on the worker thread.
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
@@ -38,8 +40,12 @@ public sealed class SmtcNowPlayingService : INowPlayingSource, IDisposable
 
     public event Action<NowPlayingState>? StateChanged;
 
-    public SmtcNowPlayingService()
+    public SmtcNowPlayingService(AudioCaptureService audio)
     {
+        _audio = audio;
+        // Controls and track info follow the app the visualizer is listening to.
+        _audio.SourceChanged += () => Post(Rebind);
+
         _thread = new Thread(Run) { IsBackground = true, Name = "SMTC now playing" };
         _thread.SetApartmentState(ApartmentState.MTA);
         _thread.Start();
@@ -131,6 +137,7 @@ public sealed class SmtcNowPlayingService : INowPlayingSource, IDisposable
         if (_manager is not null) return;
         _manager = GlobalSystemMediaTransportControlsSessionManager.RequestAsync().AsTask().GetAwaiter().GetResult();
         _manager.CurrentSessionChanged += (_, _) => Post(Rebind);
+        _manager.SessionsChanged += (_, _) => Post(Rebind);
         PruneArtCache();
         Rebind();
     }
@@ -145,7 +152,7 @@ public sealed class SmtcNowPlayingService : INowPlayingSource, IDisposable
             _session.TimelinePropertiesChanged -= OnPlaybackInfoChanged;
         }
 
-        _session = _manager?.GetCurrentSession();
+        _session = PickSession();
         if (_session is not null)
         {
             _session.MediaPropertiesChanged += OnMediaPropertiesChanged;
@@ -153,6 +160,25 @@ public sealed class SmtcNowPlayingService : INowPlayingSource, IDisposable
             _session.TimelinePropertiesChanged += OnPlaybackInfoChanged;
         }
         RefreshMetadata();
+    }
+
+    /// <summary>
+    /// The session of the app the visualizer follows, or Windows' current session when it follows a whole device.
+    /// A followed app with no media session gives null (nothing playing) rather than someone else's controls.
+    /// </summary>
+    private GlobalSystemMediaTransportControlsSession? PickSession()
+    {
+        if (_manager is null) return null;
+        var followed = _audio.FollowedProcessName;
+        if (followed is null) return _manager.GetCurrentSession();
+
+        var ids = AppUserModelIds.ForProcess(followed);
+        var matches = _manager.GetSessions().Where(s =>
+            ids.Contains(s.SourceAppUserModelId, StringComparer.OrdinalIgnoreCase) ||
+            s.SourceAppUserModelId.Contains(followed, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return matches.FirstOrDefault(s => s.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+            ?? matches.FirstOrDefault();
     }
 
     private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession _, MediaPropertiesChangedEventArgs __) => Post(RefreshMetadata);
