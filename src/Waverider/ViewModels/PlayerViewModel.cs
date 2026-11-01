@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.UI.Dispatching;
 using Waverider.Audio;
 using Waverider.Disc;
+using Waverider.NowPlaying;
 using Waverider.Spotify;
 using Waverider.Theming;
 using Waverider.Util;
@@ -13,7 +14,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
 {
     private readonly DispatcherQueue _dispatcher;
     private readonly AudioCaptureService _audio;
-    private readonly NowPlayingService _nowPlaying;
+    private readonly INowPlayingSource _nowPlaying;
     private readonly SpotifyAuthService _auth;
     private readonly ThemeService _themeService;
     private readonly IReadOnlyList<IVisualizer> _visualizers;
@@ -22,7 +23,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     public PlayerViewModel(
         DispatcherQueue dispatcher,
         AudioCaptureService audio,
-        NowPlayingService nowPlaying,
+        INowPlayingSource nowPlaying,
         SpotifyAuthService auth,
         ThemeService themeService,
         IReadOnlyList<IVisualizer> visualizers)

@@ -3,7 +3,8 @@
 A Windows-native music companion that combines:
 
 - **Real-time visualizations** of whatever Spotify is playing — using **per-process WASAPI loopback** (`ActivateAudioInterfaceAsync` + `AUDIOCLIENT_ACTIVATION_PARAMS{ ProcessLoopback }`) so Discord voice / YouTube / browsers don't bleed in. Falls back to default-device loopback (NAudio) on demand.
-- **Spotify integration** — sign in with PKCE OAuth, see now-playing metadata, control transport.
+- **Now playing with no login** — the track, artist, album art and play / pause / skip come from the Windows media session (SMTC), so it works with Spotify, browsers and most desktop players without signing in to anything.
+- **Spotify integration (optional)** — sign in with PKCE OAuth for library browsing, shuffle / repeat / likes, and the built-in player. While Spotify is playing it takes over now-playing from the Windows session.
 - **Spinning-disc album art** — the album art is a spinning **vinyl record** or **CD** (your pick) that spins up on play and coasts to a stop on pause.
 - **Two mini players** — an always-on-top overlay tucked in the corner of your screen: either the visualizer (360 × 130) or a borderless **spinning disc** that is just the disc, with no window around it.
 - **Custom theming** — drop JSON files into the `Themes/` folder next to the executable.

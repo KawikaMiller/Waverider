@@ -35,6 +35,17 @@ public sealed class AudioCaptureService : IDisposable
     public string StatusText { get; private set; } = "";
     public bool IsRunning { get; private set; }
 
+    /// <summary>Raised when the chosen capture source changes (mode or app).</summary>
+    public event Action? SourceChanged;
+
+    /// <summary>Executable name of the single app being followed, or null when capturing a whole device or the built-in player.</summary>
+    public string? FollowedProcessName => Mode switch
+    {
+        AudioCaptureMode.SpotifyOnly => "Spotify",
+        AudioCaptureMode.Application => _appProcessName,
+        _ => null,
+    };
+
     public event Action<AudioFrame>? FrameReady;
     public event Action<bool>? RunningChanged;
     public event Action<string>? StatusChanged;
@@ -53,6 +64,7 @@ public sealed class AudioCaptureService : IDisposable
             if (Mode == mode) return;
             Mode = mode;
         }
+        SourceChanged?.Invoke();
         Stop();
         Start();
     }
@@ -67,6 +79,7 @@ public sealed class AudioCaptureService : IDisposable
             _appProcessName = processName;
             _appDisplayName = displayName ?? AudioAppEnumerator.DisplayNameFor(processName);
         }
+        SourceChanged?.Invoke();
         Stop();
         Start();
     }
