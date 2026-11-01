@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Waverider.Audio;
+using Waverider.NowPlaying;
 using Waverider.Spotify;
 using Waverider.Theming;
 using Waverider.Visualization;
@@ -29,6 +30,8 @@ public static class AppHost
 
         services.AddSingleton(_ => new SpotifyAuthService(SpotifyClientId));
         services.AddSingleton<NowPlayingService>();
+        services.AddSingleton<SmtcNowPlayingService>();
+        services.AddSingleton<INowPlayingSource, NowPlayingRouter>();
         services.AddSingleton<SpotifyApiClient>();
 
         services.AddSingleton<VisualizerCatalog>();

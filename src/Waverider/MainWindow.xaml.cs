@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Waverider.Audio;
 using Waverider.Disc;
+using Waverider.NowPlaying;
 using Waverider.Spotify;
 using Waverider.Theming;
 using Waverider.Util;
@@ -37,7 +38,7 @@ public sealed partial class MainWindow : Window
         ViewModel = new PlayerViewModel(
             DispatcherQueue.GetForCurrentThread(),
             services.GetRequiredService<AudioCaptureService>(),
-            services.GetRequiredService<NowPlayingService>(),
+            services.GetRequiredService<INowPlayingSource>(),
             services.GetRequiredService<SpotifyAuthService>(),
             services.GetRequiredService<ThemeService>(),
             services.GetRequiredService<IReadOnlyList<IVisualizer>>());

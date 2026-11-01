@@ -216,7 +216,10 @@ public sealed partial class DiscView : UserControl
         {
             try
             {
-                var bytes = await Http.GetByteArrayAsync(url);
+                // SMTC art is cached on disk; Spotify art is a web URL.
+                var bytes = url.StartsWith("file:", StringComparison.OrdinalIgnoreCase)
+                    ? await File.ReadAllBytesAsync(new Uri(url).LocalPath)
+                    : await Http.GetByteArrayAsync(url);
                 image = SKImage.FromEncodedData(bytes);
             }
             catch (Exception ex)

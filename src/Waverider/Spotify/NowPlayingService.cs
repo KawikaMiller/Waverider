@@ -1,9 +1,10 @@
 using System.Diagnostics;
 using SpotifyAPI.Web;
+using Waverider.NowPlaying;
 
 namespace Waverider.Spotify;
 
-public sealed class NowPlayingService : IDisposable
+public sealed class NowPlayingService : INowPlayingSource, IDisposable
 {
     private readonly SpotifyAuthService _auth;
     private readonly System.Threading.Timer _timer;
