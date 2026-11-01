@@ -26,6 +26,12 @@ public sealed class AutoVisualizer : IVisualizer, IDisposable
     // visualizer in the same frame at different sizes.
     private readonly Dictionary<(int W, int H), (SKSurface Outgoing, SKSurface Incoming)> _surfaces = new();
 
+    // Visualizers keep per-instance state (trail buffers, particles) tied to the size they draw at, and the
+    // window, mini player and disc can all draw Auto in the same frame at different sizes. So each size draws
+    // through its own copy of the visualizer instead of fighting over one.
+    private readonly Dictionary<(IVisualizer Source, int W, int H), IVisualizer> _instances = new();
+    private const int MaxInstances = 24;
+
     private IVisualizer? _current;
     private IVisualizer? _previous;
     private double _fadeStart;
@@ -81,14 +87,14 @@ public sealed class AutoVisualizer : IVisualizer, IDisposable
         }
         if (_previous is null)
         {
-            _current.Render(canvas, info, frame, theme, timeSeconds);
+            InstanceFor(_current, info).Render(canvas, info, frame, theme, timeSeconds);
             return;
         }
 
         float progress = (float)Math.Clamp((now - _fadeStart) / FadeSeconds, 0, 1);
         var (outgoing, incoming) = SurfacesFor(info);
-        _previous.Render(outgoing.Canvas, info, frame, theme, timeSeconds);
-        _current.Render(incoming.Canvas, info, frame, theme, timeSeconds);
+        InstanceFor(_previous, info).Render(outgoing.Canvas, info, frame, theme, timeSeconds);
+        InstanceFor(_current, info).Render(incoming.Canvas, info, frame, theme, timeSeconds);
 
         canvas.Clear(SKColors.Transparent);
         using var from = outgoing.Snapshot();
@@ -108,6 +114,7 @@ public sealed class AutoVisualizer : IVisualizer, IDisposable
     private void Update(double now)
     {
         var candidates = Candidates();
+        PruneInstances(candidates);
         if (candidates.Count == 0)
         {
             _current = _previous = null;
@@ -154,6 +161,37 @@ public sealed class AutoVisualizer : IVisualizer, IDisposable
         CurrentChanged?.Invoke();
     }
 
+    private IVisualizer InstanceFor(IVisualizer source, SKImageInfo info)
+    {
+        var key = (source, info.Width, info.Height);
+        if (_instances.TryGetValue(key, out var instance)) return instance;
+
+        if (_instances.Count >= MaxInstances) DisposeInstances(); // sizes churn while a window is being resized
+        return _instances[key] = VisualizerClone.Of(source);
+    }
+
+    /// <summary>Drops the copies of visualizers that have since been deleted from the list.</summary>
+    private void PruneInstances(List<IVisualizer> candidates)
+    {
+        foreach (var key in _instances.Keys.Where(k => !candidates.Contains(k.Source)).ToList())
+        {
+            DisposeInstance(key, _instances[key]);
+            _instances.Remove(key);
+        }
+    }
+
+    private static void DisposeInstance((IVisualizer Source, int W, int H) key, IVisualizer instance)
+    {
+        // VisualizerClone hands back the original when it can't copy, and that one isn't ours to dispose.
+        if (!ReferenceEquals(instance, key.Source)) (instance as IDisposable)?.Dispose();
+    }
+
+    private void DisposeInstances()
+    {
+        foreach (var (key, instance) in _instances) DisposeInstance(key, instance);
+        _instances.Clear();
+    }
+
     private List<IVisualizer> Candidates() => _all.Where(v => !ReferenceEquals(v, this)).ToList();
 
     private (SKSurface Outgoing, SKSurface Incoming) SurfacesFor(SKImageInfo info)
@@ -178,5 +216,9 @@ public sealed class AutoVisualizer : IVisualizer, IDisposable
         _surfaces.Clear();
     }
 
-    public void Dispose() => DisposeSurfaces();
+    public void Dispose()
+    {
+        DisposeSurfaces();
+        DisposeInstances();
+    }
 }
