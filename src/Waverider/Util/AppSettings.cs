@@ -18,6 +18,7 @@ public static class AppSettings
         public bool DiscVisualizerSpins { get; set; }
         public string? CaptureMode { get; set; }
         public string? CaptureApp { get; set; }
+        public int AutoVisualizerSeconds { get; set; } = Visualization.AutoVisualizer.DefaultIntervalSeconds;
     }
 
     private static readonly string Path_ = Path.Combine(
@@ -98,6 +99,15 @@ public static class AppSettings
     {
         get => Current.CaptureApp;
         set { Current.CaptureApp = value; Save(); }
+    }
+
+    /// <summary>How long Auto stays on one visualizer, in seconds.</summary>
+    public static int AutoVisualizerSeconds
+    {
+        get => Visualization.AutoVisualizer.IntervalChoices.Contains(Current.AutoVisualizerSeconds)
+            ? Current.AutoVisualizerSeconds
+            : Visualization.AutoVisualizer.DefaultIntervalSeconds;
+        set { Current.AutoVisualizerSeconds = value; Save(); }
     }
 
     private static Data Load()

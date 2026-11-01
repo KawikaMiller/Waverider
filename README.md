@@ -50,7 +50,7 @@ The project is configured as **unpackaged + self-contained**, so no MSIX, no dev
 ## Usage
 
 - **Sign in** — top-right "Sign in" button opens a browser window, completes PKCE auth, and persists the refresh token to `%LocalAppData%\Waverider\token.json`.
-- **Visualizer** — pick from `Bars`, `Waveform`, `Radial`, `Spectrogram` in the dropdown over the canvas.
+- **Visualizer** — pick one from the dropdown over the canvas, or leave it on **Auto** (the default), which crossfades to a different visualizer every few minutes, like the old Windows Media Player did. While Auto is selected the card shows what it is on, a *2 / 3 / 5 / 10 min* interval, and a button to skip ahead. Auto draws from every visualizer in the list, including your own. It works in the mini players and on the disc too.
 - **Mini player** — click the mini icon in the top-right; the window resizes to a corner overlay with always-on-top enabled. Click the same icon again to restore (the full window returns to where it was).
 - **Album art disc** — open the gear; under *Album art disc* pick **Vinyl record** or **Compact disc**. It replaces the album art in the full window and is what the disc mini player shows.
 - **Mini player type** — open the gear; under *Mini player* pick **Visualizer** or **Spinning disc**. You can also switch while in mini mode: the visualizer mini has a swap button on hover, and the disc has it in its right-click menu.

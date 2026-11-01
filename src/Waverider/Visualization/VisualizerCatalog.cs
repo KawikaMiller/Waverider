@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Waverider.Util;
 using Waverider.Visualization.Custom;
 
 namespace Waverider.Visualization;
@@ -14,11 +15,17 @@ public sealed class VisualizerCatalog
 
     public ObservableCollection<IVisualizer> Items { get; } = new();
 
+    /// <summary>The first entry in the list; shuffles through all the others.</summary>
+    public AutoVisualizer Auto { get; }
+
     public VisualizerCatalog()
     {
         _dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Waverider", "Visualizers");
+
+        Auto = new AutoVisualizer(Items, AppSettings.AutoVisualizerSeconds);
+        Items.Add(Auto);
 
         Items.Add(new BarsVisualizer());
         Items.Add(new WaveVisualizer());

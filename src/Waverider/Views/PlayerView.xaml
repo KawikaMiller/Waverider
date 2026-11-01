@@ -61,6 +61,24 @@
                                 Orientation="Horizontal"
                                 Spacing="8"
                                 Padding="12">
+                        <StackPanel x:Name="AutoOptions"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center"
+                                    Visibility="Collapsed">
+                            <TextBlock x:Name="AutoNowText"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <ComboBox x:Name="AutoIntervalCombo"
+                                      Width="100"
+                                      SelectionChanged="OnAutoIntervalChanged"
+                                      ToolTipService.ToolTip="How long Auto stays on each visualizer" />
+                            <Button Click="OnAutoNextClick"
+                                    ToolTipService.ToolTip="Switch to the next visualizer now">
+                                <FontIcon Glyph="&#xE893;" FontSize="14" />
+                            </Button>
+                        </StackPanel>
                         <Button x:Name="CustomizeButton"
                                 Click="OnCustomizeClick"
                                 ToolTipService.ToolTip="Edit this visualizer, or make a copy of it to customize">
