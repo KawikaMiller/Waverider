@@ -40,6 +40,8 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         _state = _nowPlaying.State;
         _theme = _themeService.Current;
 
+        if (Enum.TryParse<AudioCaptureMode>(AppSettings.CaptureMode, out var savedMode))
+            _audio.Restore(savedMode, AppSettings.CaptureApp);
         _captureMode = _audio.Mode;
         _captureStatus = _audio.StatusText;
 
@@ -128,8 +130,24 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         get => _captureMode;
         set
         {
-            if (Set(ref _captureMode, value)) _audio.SetMode(value);
+            if (!Set(ref _captureMode, value)) return;
+            _audio.SetMode(value);
+            AppSettings.CaptureMode = value.ToString();
+            Raise(nameof(CaptureApp));
         }
+    }
+
+    /// <summary>Executable name of the app being captured in Application mode, otherwise null.</summary>
+    public string? CaptureApp => _captureMode == AudioCaptureMode.Application ? _audio.AppProcessName : null;
+
+    /// <summary>Captures one application's audio instead of a whole device.</summary>
+    public void SetCaptureApp(AudioApp app)
+    {
+        _audio.SetApplication(app.ProcessName, app.DisplayName);
+        AppSettings.CaptureApp = app.ProcessName;
+        AppSettings.CaptureMode = nameof(AudioCaptureMode.Application);
+        _ = Set(ref _captureMode, AudioCaptureMode.Application, nameof(CaptureMode));
+        Raise(nameof(CaptureApp));
     }
 
     private string _captureStatus = "";

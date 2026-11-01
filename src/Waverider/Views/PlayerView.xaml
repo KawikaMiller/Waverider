@@ -252,6 +252,7 @@
                         <TextBlock Text="Audio capture" FontWeight="SemiBold" />
                         <ComboBox x:Name="CaptureModeCombo" HorizontalAlignment="Stretch"
                                   SelectionChanged="OnCaptureModeChanged"
+                                  DropDownOpened="OnCaptureDropDownOpened"
                                   PlaceholderText="Capture source">
                             <ComboBoxItem Content="This app (built-in player)" Tag="ThisApp" />
                             <ComboBoxItem Content="Spotify desktop app only" Tag="SpotifyOnly" />
