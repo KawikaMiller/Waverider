@@ -357,7 +357,38 @@ public sealed partial class PlayerView : UserControl
         Editor.VisualizerCreated += v => _viewModel.SelectedVisualizer = v;
         Editor.VisualizerDeleted += _ => _viewModel.SelectedVisualizer = _catalog.Items[0];
         Unloaded += (_, _) => Editor.Flush();
+
+        foreach (int seconds in AutoVisualizer.IntervalChoices)
+            AutoIntervalCombo.Items.Add(new ComboBoxItem { Content = $"{seconds / 60} min", Tag = seconds });
+        _catalog.Auto.CurrentChanged += UpdateAutoOptions;
+        UpdateAutoOptions();
     }
+
+    /// <summary>Shows the Auto controls (what it is showing, how long per visualizer, skip) only while Auto is selected.</summary>
+    private void UpdateAutoOptions()
+    {
+        if (_catalog is null || _viewModel is null) return;
+        bool auto = ReferenceEquals(_viewModel.SelectedVisualizer, _catalog.Auto);
+        AutoOptions.Visibility = auto ? Visibility.Visible : Visibility.Collapsed;
+        if (!auto) return;
+
+        AutoNowText.Text = _catalog.Auto.Current is { } now ? $"Now: {now.Name}" : "";
+        foreach (ComboBoxItem item in AutoIntervalCombo.Items.OfType<ComboBoxItem>())
+        {
+            if ((int)item.Tag == _catalog.Auto.IntervalSeconds && !ReferenceEquals(AutoIntervalCombo.SelectedItem, item))
+                AutoIntervalCombo.SelectedItem = item;
+        }
+    }
+
+    private void OnAutoIntervalChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_catalog is null || AutoIntervalCombo.SelectedItem is not ComboBoxItem { Tag: int seconds }) return;
+        if (_catalog.Auto.IntervalSeconds == seconds) return;
+        _catalog.Auto.IntervalSeconds = seconds;
+        AppSettings.AutoVisualizerSeconds = seconds;
+    }
+
+    private void OnAutoNextClick(object sender, RoutedEventArgs e) => _catalog?.Auto.Advance();
 
     private void OnSelectedVisualizerChanged()
     {
@@ -368,6 +399,7 @@ public sealed partial class PlayerView : UserControl
             VisualizerCombo.SelectedItem = selected;
         // The editor only ever targets the user's own visualizers; presets are copied first.
         Editor.Target = selected is CustomVisualizer { IsBuiltIn: false } custom ? custom : null;
+        UpdateAutoOptions();
     }
 
     private void OnCustomizeClick(object sender, RoutedEventArgs e) => OnCustomizeClickCore();
@@ -387,7 +419,9 @@ public sealed partial class PlayerView : UserControl
         }
 
         // Built-in or preset selected: start a new editable visualizer (cloned from presets).
-        var template = (_viewModel.SelectedVisualizer as CustomVisualizer)?.Settings;
+        // With Auto selected, copy whichever visualizer it is showing right now.
+        var shown = _viewModel.SelectedVisualizer is AutoVisualizer auto ? auto.Current : _viewModel.SelectedVisualizer;
+        var template = (shown as CustomVisualizer)?.Settings;
         _viewModel.SelectedVisualizer = _catalog.CreateNew(template);
         EditorHost.Visibility = Visibility.Visible;
     }
